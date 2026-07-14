@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14161A">
+<title>Iron Log</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #14161A; color: #E8E6DF; font-family: system-ui, -apple-system, sans-serif; }
+  .app { max-width: 560px; margin: 0 auto; padding: 16px 14px 48px; }
+  .title { font-size: 26px; font-weight: 800; letter-spacing: .14em; }
+  .subtitle { font-size: 12px; color: #8A919C; margin-top: 2px; }
+  .row { display: flex; gap: 6px; margin-top: 14px; }
+  .phase { flex: 1; padding: 9px 0; background: #1C2027; color: #8A919C; border: 1px solid #2A2F38; border-radius: 8px; font-size: 13px; font-weight: 700; }
+  .phase.on { background: #F5A623; color: #14161A; border-color: #F5A623; }
+  .phasesub { font-size: 12px; color: #8A919C; margin: 8px 2px 12px; }
+  .days { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px; }
+  .day { flex: 1 0 auto; min-width: 62px; padding: 7px 8px; background: #1C2027; border: 1px solid #2A2F38; border-radius: 8px; color: #8A919C; text-align: center; }
+  .day.on { border-color: #F5A623; color: #E8E6DF; }
+  .day b { display: block; font-size: 11px; font-family: ui-monospace, Menlo, monospace; }
+  .day span { font-size: 10.5px; }
+  h2 { font-size: 17px; margin: 14px 2px 10px; }
+  .card { background: #1C2027; border: 1px solid #2A2F38; border-radius: 12px; padding: 12px 12px 14px; margin-bottom: 10px; }
+  .exhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .exname { font-size: 15px; font-weight: 700; }
+  .scheme { font-size: 12px; color: #F5A623; font-family: ui-monospace, Menlo, monospace; white-space: nowrap; }
+  .last { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12.5px; margin: 7px 0 4px; }
+  .last:last-of-type { margin-bottom: 9px; }
+  .beat { font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #14161A; background: #F5A623; border-radius: 4px; padding: 1px 5px; }
+  .today { font-size: 10px; font-weight: 800; letter-spacing: .1em; color: #14161A; background: #3FDD8C; border-radius: 4px; padding: 1px 5px; }
+  .mono { font-family: ui-monospace, Menlo, monospace; }
+  .dim { color: #6E7580; }
+  .warmnote { color: #B98C4A; font-size: 11.5px; }
+  .pr { color: #3FDD8C; font-weight: 800; font-size: 11px; }
+  .setrow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .setrow.warm input { background: #1A1712; border-color: #3A3020; }
+  .setnum { width: 18px; font-size: 11px; color: #6E7580; font-family: ui-monospace, Menlo, monospace; text-align: right; }
+  .setnum.wlab { color: #F5A623; font-weight: 800; }
+  input, textarea { background: #14161A; border: 1px solid #2A2F38; border-radius: 7px; color: #E8E6DF; padding: 8px 10px; font-size: 15px; }
+  .setrow input { flex: 1; min-width: 0; font-family: ui-monospace, Menlo, monospace; }
+  .setdel { flex: 0 0 auto; width: 34px; padding: 8px 0; background: transparent; border: 1px solid #4A3236; border-radius: 7px; color: #C97; font-size: 17px; line-height: 1; }
+  .btns { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  button { cursor: pointer; }
+  .ghost { padding: 8px 12px; background: transparent; border: 1px solid #2A2F38; border-radius: 8px; color: #8A919C; font-size: 13px; }
+  .warmbtn { padding: 8px 12px; background: transparent; border: 1px solid #3A3020; border-radius: 8px; color: #C9A25A; font-size: 13px; }
+  .undo { padding: 8px 12px; background: transparent; border: 1px solid #5A3A3A; border-radius: 8px; color: #E0A0A0; font-size: 13px; }
+  .log { flex: 1; min-width: 120px; padding: 8px 0; background: #2A2F38; border: 1px solid #3A404B; border-radius: 8px; color: #E8E6DF; font-size: 13.5px; font-weight: 700; }
+  .log.done { background: #1F3A2C; border-color: #2E9E63; color: #3FDD8C; }
+  .panel { margin-top: 20px; background: #1C2027; border: 1px solid #F5A62355; border-radius: 12px; padding: 14px; }
+  .panel h3 { margin: 0 0 10px; font-size: 15px; }
+  .panel textarea { width: 100%; font-size: 13.5px; margin-bottom: 8px; font-family: inherit; }
+  .panel .report { font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: pre; }
+  .big { width: 100%; padding: 11px 0; background: #F5A623; border: none; border-radius: 8px; color: #14161A; font-size: 14.5px; font-weight: 800; margin-bottom: 8px; }
+  .big.green { background: #2E9E63; color: #E8E6DF; }
+  .backup { margin-top: 16px; }
+  .backup button { margin-right: 8px; }
+  .foot { margin-top: 18px; font-size: 12px; color: #6E7580; text-align: center; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="title">IRON LOG</div>
+  <div class="subtitle">60-Day Strength &amp; Growth · shoulder-safe build</div>
+
+  <div class="row" id="phaseRow"></div>
+  <div class="phasesub" id="phaseSub"></div>
+  <div class="days" id="dayRow"></div>
+  <h2 id="dayTitle"></h2>
+  <div id="exList"></div>
+
+  <div class="panel">
+    <h3>Share progress with Claude</h3>
+    <textarea id="notes" rows="2" placeholder="Optional notes — sleep, soreness, shoulder, anything off..."></textarea>
+    <button class="big" onclick="buildReport()">Build weekly report</button>
+    <textarea id="reportOut" class="report hidden" rows="12" readonly onclick="this.select()"></textarea>
+    <button id="copyBtn" class="big hidden" onclick="copyReport()">Copy report</button>
+  </div>
+
+  <div class="backup">
+    <button class="ghost" onclick="exportData()">Back up data</button>
+    <button class="ghost" onclick="importData()">Restore data</button>
+  </div>
+
+  <div class="foot">Rule of the house: beat the book.<br>+ warm-up adds a lighter set (not counted) &middot; &times; deletes a set &middot; Undo today clears a logged exercise.<br>Data lives in this browser &mdash; back it up now and then.</div>
+</div>
+
+<script>
+// ---------- PROGRAM (shoulder-safe: no dips, no barbell back squat) ----------
+const PROGRAM = {
+  b1: { label: "Block 1 \u00b7 Strength", sub: "Weeks 1\u20134 \u00b7 heavy, 1\u20132 reps in reserve", days: [
+    { name: "Chest", ex: [
+      ["b1c1","Flat DB Press","5 \u00d7 4\u20136",5],
+      ["b1c2","Incline DB Press","4 \u00d7 6\u20138",4],
+      ["b1c3","Decline Barbell Press","3 \u00d7 6\u201310",3],
+      ["b1c4","High-to-Low Cable Crossover","3 \u00d7 12\u201315",3],
+      ["b1c5","Decline DB Fly","2 \u00d7 12\u201315",2]]},
+    { name: "Legs & Glutes", ex: [
+      ["b1l1","Belt Squat / Leg Press","5 \u00d7 6\u20138",5],
+      ["b1l2","Front Squat (straps)","3 \u00d7 6\u20138",3],
+      ["b1l3","Romanian Deadlift (or Leg Curl)","4 \u00d7 6\u20138",4],
+      ["b1l4","Hip Thrust","3 \u00d7 8\u201310",3],
+      ["b1l5","Walking Lunge","3 \u00d7 10/leg",3],
+      ["b1l6","Standing Calf Raise","4 \u00d7 10\u201312",4]]},
+    { name: "Shoulders & Back", ex: [
+      ["b1s1","Lat Pulldown / Pull-Up","4 \u00d7 5\u20138",4],
+      ["b1s2","Seated DB Overhead Press","4 \u00d7 6\u20138",4],
+      ["b1s3","Chest-Supported Row","4 \u00d7 6\u20138",4],
+      ["b1s4","DB Lateral Raise","4 \u00d7 12\u201315",4],
+      ["b1s5","Face Pull","3 \u00d7 15",3]]},
+    { name: "Arms", ex: [
+      ["b1a1","Close-Grip Bench Press","4 \u00d7 5\u20138",4],
+      ["b1a2","Barbell Curl","4 \u00d7 6\u20138",4],
+      ["b1a3","Overhead Cable Extension","3 \u00d7 8\u201310",3],
+      ["b1a4","Incline DB Curl","3 \u00d7 10\u201312",3],
+      ["b1a5","Rope Pushdown","3 \u00d7 12\u201315",3]]},
+    { name: "Core, Balance & Shoulder", ex: [
+      ["b1x1","Hanging Leg Raise","4 \u00d7 10\u201315",4],
+      ["b1x2","Weighted Cable Crunch","4 \u00d7 10\u201312",4],
+      ["b1x3","Pallof Press","3 \u00d7 12/side",3],
+      ["b1x4","Single-Leg RDL","3 \u00d7 10/side",3],
+      ["b1x5","Cable External Rotation","3 \u00d7 15/side",3],
+      ["b1x6","Farmer's Carry","4 \u00d7 40m (log lbs)",4]]},
+  ]},
+  b2: { label: "Block 2 \u00b7 Growth", sub: "Weeks 6\u20138 \u00b7 new exercises, more volume", days: [
+    { name: "Chest", ex: [
+      ["b2c1","Machine Incline Press","4 \u00d7 6\u20138",4],
+      ["b2c2","Flat Machine / Smith Press","4 \u00d7 8\u201312",4],
+      ["b2c3","Decline DB Press","3 \u00d7 10\u201312",3],
+      ["b2c4","Pec-Deck","3 \u00d7 12\u201315",3],
+      ["b2c5","DB Pullover","2 \u00d7 12\u201315",2]]},
+    { name: "Legs & Glutes", ex: [
+      ["b2l1","Hack Squat / Leg Press (high feet)","4 \u00d7 6\u20138",4],
+      ["b2l2","Bulgarian Split Squat","4 \u00d7 8\u201310/leg",4],
+      ["b2l3","Lying Leg Curl","3 \u00d7 10\u201312",3],
+      ["b2l4","Machine Glute Kickback","3 \u00d7 12\u201315",3],
+      ["b2l5","Hip Abduction","3 \u00d7 12\u201315",3],
+      ["b2l6","Seated Calf Raise","4 \u00d7 12\u201315",4]]},
+    { name: "Shoulders & Back", ex: [
+      ["b2s1","Chest-Supported Row","4 \u00d7 8\u201310",4],
+      ["b2s2","Machine Shoulder Press","4 \u00d7 8\u201310",4],
+      ["b2s3","Neutral-Grip Pulldown","3 \u00d7 10\u201312",3],
+      ["b2s4","Cable Lateral Raise","4 \u00d7 12\u201315",4],
+      ["b2s5","Reverse Pec-Deck","3 \u00d7 12\u201315",3],
+      ["b2s6","DB Shrug","3 \u00d7 10\u201312",3]]},
+    { name: "Arms", ex: [
+      ["b2a1","EZ-Bar Skullcrusher","4 \u00d7 8\u201312",4],
+      ["b2a2","Preacher Curl","4 \u00d7 8\u201312",4],
+      ["b2a3","Overhead Cable Extension","3 \u00d7 10\u201312",3],
+      ["b2a4","Hammer Curl","3 \u00d7 10\u201312",3],
+      ["b2a5","Cable Curl + Pushdown (superset)","3 \u00d7 12\u201315",3]]},
+    { name: "Core, Balance & Shoulder", ex: [
+      ["b2x1","Ab-Wheel Rollout","4 \u00d7 8\u201312",4],
+      ["b2x2","Decline Weighted Sit-Up","3 \u00d7 10\u201312",3],
+      ["b2x3","Side Plank Reach-Through","3 \u00d7 30s/side (log secs)",3],
+      ["b2x4","Cossack Squat","3 \u00d7 8/side",3],
+      ["b2x5","Band Pull-Apart + Ext. Rotation","3 \u00d7 15",3],
+      ["b2x6","Suitcase Carry","3 \u00d7 40m/side (log lbs)",3]]},
+  ]},
+};
+
+const KEY = "ironlog-v1";
+let hist = {};
+try { hist = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { hist = {}; }
+let phase = "b1", dayIdx = 0;
+
+const $ = (id) => document.getElementById(id);
+const today = () => new Date().toISOString().slice(0, 10);
+const fmtDate = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const isWarm = (p) => p.length > 2 && p[2];
+const workSets = (s) => s.filter(p => !isWarm(p));
+const warmCount = (s) => s.filter(isWarm).length;
+const setStr = (s) => s.map(p => p[0] + "\u00d7" + p[1]).join(", ");
+const bestSet = (s) => workSets(s).reduce((m, p) => Math.max(m, (+p[0] || 0) * (+p[1] || 0)), 0);
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(hist)); } catch (e) { alert("Couldn't save \u2014 storage may be blocked or full."); } };
+const esc = (t) => t.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+function rawEx(id) {
+  for (const blk of Object.values(PROGRAM))
+    for (const d of blk.days)
+      for (const e of d.ex)
+        if (e[0] === id) return e;
+  return null;
+}
+
+function renderPhases() {
+  $("phaseRow").innerHTML = [["b1","Block 1"],["dl","Deload"],["b2","Block 2"]].map(([k,l]) =>
+    '<button class="phase ' + (phase===k?"on":"") + '" onclick="setPhase(\'' + k + '\')">' + l + '</button>').join("");
+  $("phaseSub").textContent = phase === "dl"
+    ? "Week 5 \u00b7 ~60% weights, 2\u20133 sets, stop 4+ reps from failure. Log it anyway."
+    : (phase === "b2" ? PROGRAM.b2.sub : PROGRAM.b1.sub);
+}
+function setPhase(p) { phase = p; render(); }
+function setDay(i) { dayIdx = i; render(); }
+
+function render() {
+  renderPhases();
+  const block = phase === "b2" ? PROGRAM.b2 : PROGRAM.b1;
+  $("dayRow").innerHTML = block.days.map((d, i) =>
+    '<button class="day ' + (i===dayIdx?"on":"") + '" onclick="setDay(' + i + ')"><b>D' + (i+1) + '</b><span>' + d.name.split(",")[0].split(" &")[0] + '</span></button>').join("");
+  const day = block.days[dayIdx];
+  $("dayTitle").textContent = "Day " + (dayIdx+1) + " \u2014 " + day.name;
+  $("exList").innerHTML = day.ex.map(e => cardHTML(e)).join("");
+}
+
+function renderCard(id) {
+  const el = $("card-" + id);
+  if (el) el.outerHTML = cardHTML(rawEx(id));
+}
+
+function cardHTML(exArr) {
+  const id = exArr[0], name = exArr[1], scheme = exArr[2], nsets = exArr[3];
+  const h = hist[id] || [];
+  const todayEntry = h.find(e => e.d === today());
+  const prior = h.filter(e => e.d !== today());
+  const beatRef = prior[prior.length-1];
+  const pr = todayEntry && beatRef && bestSet(todayEntry.s) > bestSet(beatRef.s);
+
+  let info = beatRef
+    ? '<div class="last"><span class="beat">BEAT</span><span class="mono">' + setStr(workSets(beatRef.s)) + '</span><span class="dim">(' + fmtDate(beatRef.d) + ')</span></div>'
+    : '<div class="last dim">First session \u2014 set your baseline' + (phase==="dl"?" at ~60%":"") + '.</div>';
+  if (todayEntry) {
+    const wc = warmCount(todayEntry.s);
+    info += '<div class="last"><span class="today">TODAY</span><span class="mono">' + setStr(workSets(todayEntry.s)) + '</span>'
+      + (wc ? '<span class="warmnote">+' + wc + ' warm-up</span>' : '')
+      + (pr ? '<span class="pr">\u25b2 PR</span>' : '') + '</div>';
+  }
+
+  let rows = "";
+  for (let i = 0; i < nsets; i++) rows += setRowHTML(id, i+1, false);
+
+  const logBtn = todayEntry
+    ? '<button class="log done" id="btn-' + id + '" onclick="logEx(\'' + id + '\')">Update log</button>'
+    : '<button class="log" id="btn-' + id + '" onclick="logEx(\'' + id + '\')">Log exercise</button>';
+  const undoBtn = todayEntry
+    ? '<button class="undo" onclick="undoToday(\'' + id + '\')">\u21ba Undo today</button>' : "";
+
+  return '<div class="card" id="card-' + id + '">' +
+    '<div class="exhead"><div class="exname">' + esc(name) + '</div><div class="scheme">' + esc(scheme) + '</div></div>' +
+    info +
+    '<div id="sets-' + id + '">' + rows + '</div>' +
+    '<div class="btns">' +
+      '<button class="warmbtn" onclick="addWarm(\'' + id + '\')">+ warm-up</button>' +
+      '<button class="ghost" onclick="addSet(\'' + id + '\')">+ set</button>' +
+      undoBtn + logBtn +
+    '</div></div>';
+}
+
+function setRowHTML(id, label, warm) {
+  const cls = warm ? "setrow warm" : "setrow";
+  const numCls = warm ? "setnum wlab" : "setnum";
+  const lab = warm ? "W" : label;
+  return '<div class="' + cls + '" data-warm="' + (warm ? "1" : "0") + '">' +
+    '<span class="' + numCls + '">' + lab + '</span>' +
+    '<input inputmode="decimal" placeholder="lbs" data-k="w">' +
+    '<span class="dim">\u00d7</span>' +
+    '<input inputmode="numeric" placeholder="reps" data-k="r">' +
+    '<button class="setdel" onclick="deleteSet(this,\'' + id + '\')" aria-label="Delete set">\u00d7</button></div>';
+}
+function renumber(id) {
+  let n = 0;
+  document.querySelectorAll("#sets-" + id + " .setrow").forEach((r) => {
+    const lab = r.querySelector(".setnum");
+    if (r.getAttribute("data-warm") === "1") { lab.textContent = "W"; }
+    else { n++; lab.textContent = n; }
+  });
+}
+function addSet(id) {
+  $("sets-" + id).insertAdjacentHTML("beforeend", setRowHTML(id, 0, false));
+  renumber(id);
+}
+function addWarm(id) {
+  $("sets-" + id).insertAdjacentHTML("afterbegin", setRowHTML(id, 0, true));
+  renumber(id);
+}
+function deleteSet(btn, id) {
+  const row = btn.closest(".setrow");
+  if (row) row.parentNode.removeChild(row);
+  renumber(id);
+}
+function logEx(id) {
+  const rows = document.querySelectorAll("#sets-" + id + " .setrow");
+  const sets = [];
+  rows.forEach((row) => {
+    const w = parseFloat(row.querySelector('input[data-k="w"]').value);
+    const r = parseFloat(row.querySelector('input[data-k="r"]').value);
+    if (!isNaN(w) && !isNaN(r) && r > 0) {
+      if (row.getAttribute("data-warm") === "1") sets.push([w, r, 1]);
+      else sets.push([w, r]);
+    }
+  });
+  if (!workSets(sets).length) return;
+  const arr = (hist[id] || []).filter(e => e.d !== today());
+  arr.push({ d: today(), s: sets });
+  hist[id] = arr.slice(-14);
+  save();
+  renderCard(id);
+}
+function undoToday(id) {
+  if (!hist[id]) return;
+  hist[id] = hist[id].filter(e => e.d !== today());
+  if (!hist[id].length) delete hist[id];
+  save();
+  renderCard(id);
+}
+
+// ---------- REPORT ----------
+function findEx(id) {
+  for (const blk of Object.values(PROGRAM))
+    for (const d of blk.days)
+      for (const e of d.ex)
+        if (e[0] === id) return { blk: blk.label, day: d.name, name: e[1], scheme: e[2] };
+  return null;
+}
+function buildReport() {
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 8);
+  const groups = {};
+  for (const pair of Object.entries(hist)) {
+    const id = pair[0], h = pair[1];
+    if (!h.length) continue;
+    const latest = h[h.length-1];
+    if (new Date(latest.d + "T12:00:00") < cutoff) continue;
+    const meta = findEx(id); if (!meta) continue;
+    const key = meta.blk + " \u2014 " + meta.day;
+    const prev = h[h.length-2];
+    let line = "\u2022 " + meta.name + " (" + meta.scheme + "): " + setStr(workSets(latest.s));
+    if (prev) line += "  [prev: " + setStr(workSets(prev.s)) + "]";
+    if (prev && bestSet(latest.s) > bestSet(prev.s)) line += "  \u25b2";
+    (groups[key] = groups[key] || []).push(line);
+  }
+  let out = ["IRON LOG REPORT \u2014 " + fmtDate(today())];
+  const keys = Object.keys(groups);
+  if (!keys.length) out.push("", "(No sessions logged in the past 8 days.)");
+  for (const k of keys) { out.push("", k); for (const l of groups[k]) out.push(l); }
+  const n = $("notes").value.trim();
+  if (n) out.push("", "Notes: " + n);
+  out.push("", "How it felt / shoulder status: ");
+  const ta = $("reportOut");
+  ta.value = out.join("\n");
+  ta.classList.remove("hidden");
+  $("copyBtn").classList.remove("hidden");
+  $("copyBtn").textContent = "Copy report";
+  $("copyBtn").classList.remove("green");
+}
+function copyReport() {
+  const ta = $("reportOut");
+  ta.select(); ta.setSelectionRange(0, 999999);
+  const done = () => { const b = $("copyBtn"); b.textContent = "Copied \u2014 paste it to Claude"; b.classList.add("green"); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(done).catch(() => { document.execCommand("copy"); done(); });
+  } else { document.execCommand("copy"); done(); }
+}
+
+// ---------- BACKUP ----------
+function exportData() {
+  const blob = new Blob([JSON.stringify(hist)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ironlog-backup-" + today() + ".json";
+  a.click();
+}
+function importData() {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".json,application/json";
+  inp.onchange = () => {
+    const f = inp.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try { hist = JSON.parse(r.result); save(); render(); alert("Data restored."); }
+      catch (e) { alert("That file couldn't be read as a backup."); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+render();
+</script>
+</body>
+</html>
